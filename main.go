@@ -13,39 +13,37 @@ import (
 const chars = "abcdefghijklmnopqrstuvwxyz"
 
 type result struct {
-	chars string
-	score int
-	count int // testing number of iterations
+	chosen string
+	score  int
+	count  int // testing number of iterations
 }
 
 func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc, ch chan<- result, goal string, id int) {
 	defer wg.Done()
 	fmt.Printf("Running routine %d\n", id)
+	seed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	generated := make([]byte, len(goal))
+
 	res := result{
-		chars: "",
-		score: 0,
-		count: 0,
+		chosen: "",
+		score:  0,
+		count:  0,
 	}
 	for {
 		select {
 		case <-ctx.Done():
 			ch <- res
+
 			return
 		default:
 			{
-				res.count++
-				seed := rand.New(rand.NewSource(time.Now().UnixNano()))
-				generated := make([]byte, len(goal))
-
+				// res.count++
 				for i := 0; i < len(goal); i++ {
 					generated[i] = chars[seed.Intn(len(chars))]
 				}
-				tmpChar := ""
 				tmpScore := 0
-
 				for i := 0; i < len(goal); i++ {
 					if goal[i] == generated[i] {
-						tmpChar += string(generated[i])
 						tmpScore++
 					} else {
 						break
@@ -53,16 +51,14 @@ func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc,
 				}
 				if tmpScore > res.score {
 					res.score = tmpScore
-					res.chars = tmpChar
-				}
-
-				if res.score == len(goal) {
-					deadline, _ := ctx.Deadline()
-					timeleft := time.Until(deadline).Seconds()
-					fmt.Printf("Routine %d has achieved max score, cancelling all and returning. Process finished: %.2fs early\n", id, timeleft)
-					ch <- res
-					cancel()
-
+					res.chosen = string(generated[0:tmpScore])
+					if res.score == len(goal) { // cancel early if a full score is achieved...
+						deadline, _ := ctx.Deadline()
+						timeleft := time.Until(deadline).Seconds()
+						fmt.Printf("Routine %d has achieved max score, cancelling all and returning. Process finished: %.2fs early\n", id, timeleft)
+						ch <- res
+						cancel()
+					}
 				}
 			}
 
@@ -73,7 +69,7 @@ func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc,
 }
 
 func main() {
-	maxProcs := runtime.GOMAXPROCS(0) + 2 // Gets max num of cores we can use, add 4 as some will get blocked occasionally available
+	maxProcs := runtime.GOMAXPROCS(0) + 2 // Gets max num of cores we can use, add 2 as some will get blocked occasionally
 	var wg sync.WaitGroup
 	wg.Add(maxProcs)
 	const goal = "shakespeare"
@@ -98,5 +94,5 @@ func main() {
 		return results[i].score > results[j].score
 	})
 
-	fmt.Printf("Best score achieved was %d with '%s'. A total of %d iterations were made\n", results[0].score, results[0].chars, finalCount)
+	fmt.Printf("Best score achieved was %d with '%s'. A total of %d iterations were achieved\n", results[0].score, results[0].chosen, finalCount)
 }
