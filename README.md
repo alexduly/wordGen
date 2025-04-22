@@ -1,3 +1,3 @@
 # wordGen
-A small golang test
-Have 5 minutes to try and generate the word shakespeare - every consecutive letter starting from the start scores 1 point. e.g shakespeare scores 11, jhakespeare scores 0, and shaaaaaaaaa scores 3. 
+Task
+You are to write a program that generates 11 random lowercase letters, and then checks to see if it makes the word shakespeare. Points are equivalent to how many consecutive letters are correct  (i.e. sh********* = 2 points || *hakespeare = 0 points || shake****** = 5 points). Your program should output it's best attempt after 5 mins.
