@@ -37,12 +37,10 @@ func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc,
 			return
 		default:
 			{
-				// res.count++
-				for i := 0; i < len(goal); i++ {
-					generated[i] = chars[seed.Intn(len(chars))]
-				}
+				res.count++
 				tmpScore := 0
 				for i := 0; i < len(goal); i++ {
+					generated[i] = chars[seed.Intn(len(chars))]
 					if goal[i] == generated[i] {
 						tmpScore++
 					} else {

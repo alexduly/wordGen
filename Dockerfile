@@ -4,7 +4,7 @@ WORKDIR /app/
 
 COPY src/ /app/
 
-RUN go build main.go
+RUN go build -o main main.go
 
 
-CMD ["/app/shakespeare"]
+CMD ["/app/main"]
