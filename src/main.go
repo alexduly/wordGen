@@ -10,37 +10,34 @@ import (
 	"time"
 )
 
-const chars = "abcdefghijklmnopqrstuvwxyz"
+var charSlice = []byte("abcdefghijklmnopqrstuvwxyz")
 
 type result struct {
-	chosen string
-	score  int
-	count  int // testing number of iterations
+	score int
+	count int // testing number of iterations
 }
 
 func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc, ch chan<- result, goal string, id int) {
 	defer wg.Done()
-	fmt.Printf("Running routine %d\n", id)
-	seed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	seedVal := time.Now().UnixNano() ^ int64(id)*1_000_000_007
+	seed := rand.New(rand.NewSource(seedVal))
 	generated := make([]byte, len(goal))
 
 	res := result{
-		chosen: "",
-		score:  0,
-		count:  0,
+		score: 0,
+		count: 0,
 	}
 	for {
 		select {
 		case <-ctx.Done():
 			ch <- res
-
 			return
 		default:
 			{
 				res.count++
 				tmpScore := 0
 				for i := 0; i < len(goal); i++ {
-					generated[i] = chars[seed.Intn(len(chars))]
+					generated[i] = charSlice[seed.Intn(26)]
 					if goal[i] == generated[i] {
 						tmpScore++
 					} else {
@@ -49,7 +46,6 @@ func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc,
 				}
 				if tmpScore > res.score {
 					res.score = tmpScore
-					res.chosen = string(generated[0:tmpScore])
 					if res.score == len(goal) { // cancel early if a full score is achieved...
 						deadline, _ := ctx.Deadline()
 						timeleft := time.Until(deadline).Seconds()
@@ -59,11 +55,8 @@ func routine(ctx context.Context, wg *sync.WaitGroup, cancel context.CancelFunc,
 					}
 				}
 			}
-
 		}
-
 	}
-
 }
 
 func main() {
@@ -72,6 +65,7 @@ func main() {
 	wg.Add(maxProcs)
 	const goal = "shakespeare"
 	ch := make(chan result, maxProcs)
+	fmt.Printf("Starting at %s with %d processes\n", time.Now().String(), maxProcs)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	for i := 0; i < maxProcs; i++ {
@@ -92,5 +86,5 @@ func main() {
 		return results[i].score > results[j].score
 	})
 
-	fmt.Printf("Best score achieved was %d with '%s'. A total of %d iterations were achieved\n", results[0].score, results[0].chosen, finalCount)
+	fmt.Printf("Best score achieved was %d with '%s'. A total of %d iterations were achieved\n", results[0].score, goal[0:results[0].score], finalCount)
 }
